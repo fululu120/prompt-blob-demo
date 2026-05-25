@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Prompt 收藏库</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #f6f7f3;
+      color: #1f2937;
+      margin: 0;
+    }
+
+    .card {
+      background: rgba(255,255,255,0.95);
+      border: 1px solid rgba(6, 78, 59, 0.08);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.03);
+      backdrop-filter: blur(10px);
+    }
+
+    textarea {
+      resize: none;
+    }
+
+    .line-clamp {
+      display: -webkit-box;
+      -webkit-line-clamp: 5;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #064e3b;
+      color: white;
+      padding: 12px 18px;
+      border-radius: 14px;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.25s ease;
+      z-index: 9999;
+    }
+
+    .toast.show {
+      opacity: 1;
+      bottom: 34px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="max-w-7xl mx-auto px-4 py-8">
+
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-8">
+      <div>
+
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-900/10 text-emerald-900 text-sm mb-4">
+          <div class="w-2 h-2 rounded-full bg-emerald-700"></div>
+          Prompt Library
+        </div>
+
+        <h1 class="text-4xl md:text-5xl font-bold tracking-tight leading-tight text-emerald-950">
+          Prompt 收藏工具
+        </h1>
+
+        <p class="text-zinc-500 mt-3 text-base md:text-lg max-w-2xl leading-8">
+          支持全文关键词搜索、编辑、复制、分类管理，并按照复制热度自动排序。
+        </p>
+      </div>
+
+      <button
+        onclick="openModal()"
+        class="bg-emerald-900 text-white font-semibold px-6 py-3 rounded-2xl hover:opacity-90 transition-all duration-200"
+      >
+        + 新增 Prompt
+      </button>
+    </div>
+
+    <div class="card rounded-3xl p-4 mb-8">
+      <div class="flex flex-col md:flex-row gap-4">
+
+        <div class="flex-1 relative">
+          <input
+            id="searchInput"
+            type="text"
+            placeholder="搜索标题、内容、关键词..."
+            class="w-full bg-white border border-zinc-200 rounded-2xl px-5 py-4 text-zinc-800 placeholder:text-zinc-400 outline-none focus:border-emerald-900 transition"
+          />
+
+          <div class="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400">
+            ⌘K
+          </div>
+        </div>
+
+        <select
+          id="categoryFilter"
+          class="bg-white border border-zinc-200 rounded-2xl px-4 py-4 text-zinc-800 outline-none focus:border-emerald-900"
+        >
+          <option value="all">全部分类</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+
+      <div class="card rounded-3xl p-5">
+        <div class="text-zinc-500 text-sm">Prompt 总数</div>
+        <div id="totalCount" class="text-3xl font-bold mt-2 text-emerald-900">0</div>
+      </div>
+
+      <div class="card rounded-3xl p-5">
+        <div class="text-zinc-500 text-sm">分类数量</div>
+        <div id="categoryCount" class="text-3xl font-bold mt-2 text-emerald-900">0</div>
+      </div>
+
+      <div class="card rounded-3xl p-5">
+        <div class="text-zinc-500 text-sm">总复制次数</div>
+        <div id="copyCount" class="text-3xl font-bold mt-2 text-emerald-900">0</div>
+      </div>
+
+      <div class="card rounded-3xl p-5">
+        <div class="text-zinc-500 text-sm">搜索结果</div>
+        <div id="resultCount" class="text-3xl font-bold mt-2 text-emerald-900">0</div>
+      </div>
+    </div>
+
+    <div id="promptGrid" class="grid md:grid-cols-2 xl:grid-cols-3 gap-6"></div>
+
+  </div>
+
+  <div id="modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
+
+    <div class="card rounded-3xl p-6 w-full max-w-2xl">
+
+      <div class="flex items-center justify-between mb-6">
+        <h2 id="modalTitle" class="text-2xl font-bold text-emerald-900">
+          新增 Prompt
+        </h2>
+
+        <button onclick="closeModal()" class="text-zinc-400 hover:text-zinc-800 text-xl">
+          ✕
+        </button>
+      </div>
+
+      <div class="space-y-4">
+
+        <input
+          id="titleInput"
+          type="text"
+          placeholder="Prompt 标题"
+          class="w-full bg-white border border-zinc-200 rounded-2xl px-4 py-4 outline-none focus:border-emerald-900"
+        />
+
+        <input
+          id="categoryInput"
+          type="text"
+          placeholder="分类（例如：设计 / AI视频 / 小红书）"
+          class="w-full bg-white border border-zinc-200 rounded-2xl px-4 py-4 outline-none focus:border-emerald-900"
+        />
+
+        <textarea
+          id="contentInput"
+          rows="12"
+          placeholder="粘贴完整 Prompt 内容..."
+          class="w-full bg-white border border-zinc-200 rounded-2xl px-4 py-4 outline-none focus:border-emerald-900"
+        ></textarea>
+
+        <button
+          onclick="savePrompt()"
+          class="w-full bg-emerald-900 text-white font-semibold py-4 rounded-2xl hover:opacity-90 transition"
+        >
+          保存 Prompt
+        </button>
+
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast">已复制</div>
+
+  <script>
+
+    let editingId = null;
+
+    let prompts = [];
+    let copyCount = 0;
+
+    async function loadFromServer() {
+      try {
+        const res = await fetch('/api/prompts');
+        const data = await res.json();
+        prompts = data.prompts || [];
+        copyCount = data.totalCopyCount || 0;
+      } catch (err) {
+        console.error('加载失败，请确认已启动 python3 prompt-server.py', err);
+      }
+      renderPrompts();
+    }
+
+    async function saveToServer() {
+      try {
+        await fetch('/api/prompts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompts, totalCopyCount: copyCount })
+        });
+      } catch (err) {
+        console.error('保存失败', err);
+      }
+    }
+
+    const promptGrid = document.getElementById('promptGrid');
+    const searchInput = document.getElementById('searchInput');
+    const categoryFilter = document.getElementById('categoryFilter');
+
+    function showToast(text = '已复制') {
+      const toast = document.getElementById('toast');
+
+      toast.innerText = text;
+      toast.classList.add('show');
+
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 1400);
+    }
+
+    function renderCategoryOptions() {
+      const currentValue = categoryFilter.value;
+
+      const categories = [...new Set(prompts.map(item => item.category))];
+
+      categoryFilter.innerHTML = `
+        <option value="all">全部分类</option>
+        ${categories.map(c => `<option value="${c}">${c}</option>`).join('')}
+      `;
+
+      categoryFilter.value = currentValue;
+    }
+
+    function renderPrompts() {
+
+      prompts.sort((a, b) => (b.copyCount || 0) - (a.copyCount || 0));
+
+      const keyword = searchInput.value.toLowerCase();
+      const category = categoryFilter.value;
+
+      const filtered = prompts.filter(item => {
+
+        const matchKeyword =
+          item.title.toLowerCase().includes(keyword) ||
+          item.content.toLowerCase().includes(keyword) ||
+          item.category.toLowerCase().includes(keyword);
+
+        const matchCategory =
+          category === 'all' || item.category === category;
+
+        return matchKeyword && matchCategory;
+      });
+
+      promptGrid.innerHTML = filtered.map(item => `
+
+        <div class="card rounded-3xl p-6 flex flex-col gap-4 hover:-translate-y-1 transition-all duration-300 min-h-[320px]">
+
+          <div class="flex items-start justify-between gap-4">
+
+            <div>
+              <div class="inline-flex px-3 py-1 rounded-full bg-emerald-900/10 text-emerald-900 text-xs mb-3">
+                ${item.category}
+              </div>
+
+              <h3 class="text-xl font-semibold leading-tight text-zinc-900">
+                ${item.title}
+              </h3>
+            </div>
+
+            <div class="flex gap-2">
+
+              <button
+                onclick="editPrompt(${item.id})"
+                class="w-9 h-9 rounded-xl border border-zinc-200 hover:border-emerald-900 transition"
+              >
+                ✏️
+              </button>
+
+              <button
+                onclick="deletePrompt(${item.id})"
+                class="w-9 h-9 rounded-xl border border-zinc-200 hover:border-red-400 transition"
+              >
+                🗑
+              </button>
+
+            </div>
+          </div>
+
+          <div class="text-zinc-500 text-sm leading-7 line-clamp">
+            ${item.content.replace(/\n/g, '<br>')}
+          </div>
+
+          <div class="mt-auto flex items-center gap-3 pt-4">
+
+            <button
+              onclick="copyPrompt(${item.id})"
+              class="flex-1 bg-emerald-900 text-white font-semibold py-3 rounded-2xl hover:opacity-90 transition"
+            >
+              复制 (${item.copyCount || 0})
+            </button>
+
+            <button
+              onclick="viewPrompt(${item.id})"
+              class="px-5 py-3 rounded-2xl border border-zinc-200 hover:border-emerald-900 transition"
+            >
+              查看
+            </button>
+
+          </div>
+
+        </div>
+
+      `).join('');
+
+      document.getElementById('totalCount').innerText = prompts.length;
+      document.getElementById('categoryCount').innerText = [...new Set(prompts.map(i => i.category))].length;
+      document.getElementById('copyCount').innerText = copyCount;
+      document.getElementById('resultCount').innerText = filtered.length;
+
+      renderCategoryOptions();
+    }
+
+    function openModal() {
+
+      if (!editingId) {
+        document.getElementById('modalTitle').innerText = '新增 Prompt';
+      }
+
+      document.getElementById('modal').classList.remove('hidden');
+      document.getElementById('modal').classList.add('flex');
+    }
+
+    function closeModal() {
+      editingId = null;
+
+      document.getElementById('modal').classList.add('hidden');
+      document.getElementById('modal').classList.remove('flex');
+
+      document.getElementById('titleInput').value = '';
+      document.getElementById('categoryInput').value = '';
+      document.getElementById('contentInput').value = '';
+    }
+
+    async function savePrompt() {
+
+      const title = document.getElementById('titleInput').value.trim();
+      const category = document.getElementById('categoryInput').value.trim();
+      const content = document.getElementById('contentInput').value.trim();
+
+      if (!title || !category || !content) {
+        alert('请填写完整内容');
+        return;
+      }
+
+      if (prompts.length >= 1000 && !editingId) {
+        alert('最多只能保存1000条 Prompt');
+        return;
+      }
+
+      if (editingId) {
+
+        prompts = prompts.map(item => {
+          if (item.id === editingId) {
+            return {
+              ...item,
+              title,
+              category,
+              content
+            };
+          }
+
+          return item;
+        });
+
+      } else {
+
+        prompts.unshift({
+          id: Date.now(),
+          title,
+          category,
+          content,
+          copyCount: 0
+        });
+      }
+
+      await saveToServer();
+      renderPrompts();
+      closeModal();
+    }
+
+    async function deletePrompt(id) {
+
+      const confirmed = confirm('确定删除这个 Prompt 吗？');
+
+      if (!confirmed) return;
+
+      prompts = prompts.filter(item => item.id !== id);
+
+      await saveToServer();
+      renderPrompts();
+    }
+
+    async function fallbackCopy(text) {
+
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+
+      document.body.appendChild(textarea);
+
+      textarea.focus();
+      textarea.select();
+
+      try {
+        document.execCommand('copy');
+        showToast('已复制');
+      } catch (err) {
+        alert('当前浏览器不支持自动复制，请手动复制');
+      }
+
+      document.body.removeChild(textarea);
+    }
+
+    async function copyPrompt(id) {
+
+      const item = prompts.find(i => i.id === id);
+
+      if (!item) return;
+
+      try {
+
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(item.content);
+        } else {
+          await fallbackCopy(item.content);
+        }
+
+      } catch (error) {
+        await fallbackCopy(item.content);
+      }
+
+      item.copyCount = (item.copyCount || 0) + 1;
+
+      copyCount += 1;
+
+      await saveToServer();
+      renderPrompts();
+    }
+
+    function editPrompt(id) {
+
+      const item = prompts.find(i => i.id === id);
+
+      if (!item) return;
+
+      editingId = id;
+
+      document.getElementById('modalTitle').innerText = '编辑 Prompt';
+      document.getElementById('titleInput').value = item.title;
+      document.getElementById('categoryInput').value = item.category;
+      document.getElementById('contentInput').value = item.content;
+
+      openModal();
+    }
+
+    function viewPrompt(id) {
+
+      const item = prompts.find(i => i.id === id);
+
+      if (!item) return;
+
+      alert(`${item.title}\n\n${item.content}`);
+    }
+
+    searchInput.addEventListener('input', renderPrompts);
+
+    categoryFilter.addEventListener('change', renderPrompts);
+
+    document.addEventListener('keydown', e => {
+
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        searchInput.focus();
+      }
+
+      if (e.key === 'Escape') {
+        closeModal();
+      }
+    });
+
+    loadFromServer();
+
+  </script>
+
+</body>
+</html>
